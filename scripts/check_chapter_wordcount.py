@@ -140,7 +140,7 @@ def print_results(results: list, min_words: int = 3000):
         print('   - 增加对话场景')
         print('   - 扩展人物内心活动')
         print('   - 补充背景故事')
-        print(f'\n   参考: references/content-expansion.md')
+        print(f'\n   参考: references/guides/content-expansion.md')
 
 
 def main():

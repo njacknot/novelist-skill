@@ -54,13 +54,11 @@ metadata:
 读取用户偏好（`user-preferences.json`），检测未完成项目（中断续写），展示个性化欢迎。
 → 详见 [references/flows/phase0-initialization.md](references/flows/phase0-initialization.md)
 
-### 第 1 阶段：三层递进式问答
+### 第 1 阶段：递进式问答
 
 通过递进式问答收集创作需求，每个问题都支持"跳过"和"🎲随机生成"：
 
-- **Layer 1 核心定位**（必答）：题材创意、主角设定、核心冲突 → [phase1-layer1-core.md](references/flows/phase1-layer1-core.md)
-- **Layer 2 深度定制**（可选）：世界观、叙事视角、核心主题、读者定位、章节数量 → [phase1-layer2-customize.md](references/flows/phase1-layer2-customize.md)
-- **Layer 3 标题生成**：AI 基于创意元素生成候选标题，用户确认 → [phase1-layer3-title.md](references/flows/phase1-layer3-title.md)
+- **Phase 1 统一问答流**：核心定位（Q1-Q3）→ 深度定制（Q4-Q8）→ 标题生成 → [phase1-questionnaire.md](references/flows/phase1-questionnaire.md)
 
 ### 第 2 阶段：规划 + 二次确认
 
@@ -73,7 +71,6 @@ metadata:
 |------|------|------|
 | **逐章串行** `serial` | 主 Agent 逐章写，稳定可靠 | 默认推荐 |
 | **子 Agent 并行** `subagent-parallel` | 将章节分批派生子 Agent 并行写作 | 追求速度的中长篇 |
-| **Agent Teams** `agent-teams` | Claude Code 多 Agent 协作（Gemini/Codex 不支持，会自动回退到 serial） | 大型长篇 |
 
 ### 第 3 阶段：疯狂创作（无需用户确认）
 
@@ -94,17 +91,32 @@ metadata:
 
 执行 `/一键开书` 或在简易模式中回复 `/专业模式` 切换到专业模式。
 
-### 五步质量门禁（每章不可跳过）
+### 六步质量门禁（v1.2.0 起，每章不可跳过）
 
-| 步骤 | 命令 | 产物 |
-|------|------|------|
-| 1 | `/更新记忆` | `memory_update.md` |
-| 2 | `/检查一致性` | `consistency_report.md` |
-| 3 | `/风格校准` | `style_calibration.md` |
-| 4 | `/校稿` | `copyedit_report.md` + `publish_ready.md` |
-| 5 | `/门禁检查` | `gate_result.json`（`passed: true` 才解锁下一章） |
+| 步骤 | 命令（新） | 命令（旧别名） | 产物 |
+|------|------|----------|------|
+| 1 | `/检查 --记忆` | `/更新记忆` | `memory_update.md` |
+| 2 | `/检查 --一致性` | `/检查一致性` | `consistency_report.md` |
+| 3 | `/检查 --文风` | `/风格校准` | `style_calibration.md` |
+| 4 | `/门禁 --校稿` | `/校稿` | `copyedit_report.md` + `publish_ready.md` |
+| 5 ★ | `/检查 --读者` | （新增） | `reader_report.md`（总分 ≥ 70 才通过）|
+| 6 | `/门禁 --运行` | `/门禁检查` | `gate_result.json`（`passed: true` 才解锁下一章） + 同步回写 `02-写作计划.json` 的 `gateScores` |
 
-门禁失败后唯一合法操作是 `/修复本章`，由系统自动生成最短修复路径。
+★ = v1.2.0 新增读者维度（跨主要竞品调研后引入）。详见 [reader-simulator-spec.md](references/advanced/reader-simulator-spec.md)。
+
+门禁失败后唯一合法操作是 `/章 --修复`（旧名 `/修复本章`），由系统自动生成最短修复路径。
+
+### 跨章质量仪表盘（v1.2.0 新增）
+
+门禁完成后，5 个维度的分数会自动写入 `02-写作计划.json` 的 `gateScores`，供仪表盘消费：
+
+| 命令 | 用途 |
+|------|------|
+| `/面板 --质量` | 全书五维度趋势 + 读者 6 子项 + 拐点告警 + 离群/高光章 |
+| `/面板 --读者` | 仅读者维度趋势专项诊断 |
+| `/面板 --状态` | 项目健康度一眼看 |
+
+详见 [quality-dashboard-spec.md](references/advanced/quality-dashboard-spec.md)。
 
 ### 长期记忆（五层协同）
 
@@ -117,11 +129,12 @@ metadata:
 | 5 | 跨 Agent 审核 | 独立审稿官批处理体检 |
 
 详细规范：
-- [references/advanced/outline-anchor-quota-spec.md](references/advanced/outline-anchor-quota-spec.md)
-- [references/advanced/beat-pipeline-spec.md](references/advanced/beat-pipeline-spec.md)
-- [references/advanced/anti-resolution-cooldown-spec.md](references/advanced/anti-resolution-cooldown-spec.md)
-- [references/advanced/story-graph-schema.md](references/advanced/story-graph-schema.md)
+- [references/advanced/million-word-roadmap.md](references/advanced/million-word-roadmap.md) — 百万字路线图 + 规划中高级能力（锚点/冷却/beat流水线/图谱/RAG/题材矩阵）
 - [references/advanced/humanizer-guide.md](references/advanced/humanizer-guide.md)
+- [references/advanced/command-contracts.md](references/advanced/command-contracts.md) — 命令契约与子命令路由规范（所有命令的执行契约单一来源）
+- [references/advanced/reader-simulator-spec.md](references/advanced/reader-simulator-spec.md) — **读者模拟审稿规范**（v1.2.0 门禁第 6 维度：6 子分 + 4 读者画像）
+- [references/advanced/quality-dashboard-spec.md](references/advanced/quality-dashboard-spec.md) — **质量趋势仪表盘规范**（v1.2.0 跨章趋势 + 拐点告警 + 4 种输出格式）
+- [references/guides/saohua.md](references/guides/saohua.md) — **骚话完整系统**（单文件覆盖 86 模板 / 密度 / 触发 / 人设卡 / 名场面 / 题材矩阵 / 节奏 / 伏笔 / 对决 / 组合技）
 
 ### 节奏配额三档制
 
@@ -133,58 +146,139 @@ metadata:
 
 ## 命令表
 
-### 新手命令（建议入口）
+> **v1.1.0 契约化**：命令已重构为"**九大主命令 + 子参数**"形式。完整执行契约（输入/查询路径/输出）见 [references/advanced/command-contracts.md](references/advanced/command-contracts.md)。
+>
+> 所有旧命令作为向后兼容别名保留，详见下文「旧命令别名」小节。
+
+### 新手入口（建议从这里开始）
 
 | 命令 | 功能 | 何时使用 |
 |------|------|---------|
-| `/一键开书` | 自动完成开书全流程（五要素确认 → 规划 → 首章准备） | 第一次开项目 |
-| `/继续写` | 引导剧情走向 → 自动串行完整章节流程 | 日常推进章节 |
-| `/修复本章` | 门禁失败后自动修复 | 门禁返回失败后 |
+| `/书 --开书` | 自动完成开书全流程（五要素确认 → 规划 → 首章准备） | 第一次开项目 |
+| `/章 --续写` | 引导剧情走向 → 自动串行完整章节流程 | 日常推进章节 |
+| `/章 --修复` | 门禁失败后自动修复 | 门禁返回失败后 |
 | `/简易模式` | 切换到简易流程（默认） | 按需 |
 | `/专业模式` | 切换到长篇强约束模式 | 百万字级项目 |
 
-### 创作命令
+### 九大主命令
 
-| 命令 | 功能 |
-|------|------|
-| `/写全篇` | 模糊想法 → 百万字路线图 |
-| `/写作` | 生成单章草稿 |
-| `/续写` | 恢复会话状态并继续 |
-| `/批量写作` | 连续生成多章 |
-| `/修改章节` | 修订已写章节并级联更新 |
-| `/改纲续写` | 改纲 + 锚点重算 + 图谱级联 + RAG 重建 |
-| `/一键写书` | 全自动写作调度 |
+#### `/书` — 全书级操作
 
-### 质量命令（专业模式每章必经）
+| 子命令 | 功能 |
+|--------|------|
+| `/书 --开书` | 五要素确认 → 规划 → 首章准备 |
+| `/书 --规划` | 模糊想法 → 百万字路线图 |
+| `/书 --路线图` | 查看当前卷/阶段/章节位置与下一锚点 |
+| `/书 --改纲 [--from-chapter N]` | 改纲 + 锚点重算 + 图谱级联 + RAG 重建 |
 
-| 命令 | 功能 |
-|------|------|
-| `/更新记忆` | 同步状态追踪器 |
-| `/检查一致性` | 检查剧情/设定/时间线冲突 |
-| `/节奏审查` | 语义级节奏审查（AI 自身执行，无需外部 API） |
-| `/风格校准` | 检测文风偏移 |
-| `/校稿` | 两遍式去 AI 味润色 |
-| `/门禁检查` | 校验发布标准 |
+#### `/章` — 章节级操作
 
-### 检索与记忆命令
+| 子命令 | 功能 |
+|--------|------|
+| `/章 --写` | 生成单章草稿（含骚话注入） |
+| `/章 --续写` | 恢复会话 + 写新章 + 自动门禁 |
+| `/章 --批量 <N>` | 连续生成 N 章 |
+| `/章 --修改 <章号>` | 修订 + 级联更新 |
+| `/章 --修复 <章号>` | 门禁失败修复 |
+| `/章 --快照 <章号>` | 手动创建章节快照（规划中） |
+| `/章 --回滚 <章号> [--版本]` | 回滚到指定快照（规划中） |
 
-| 命令 | 功能 |
-|------|------|
-| `/剧情检索` | RAG 检索相关片段 |
-| `/更新剧情索引` | 扫描章节建立索引 |
-| `/伏笔状态` | 查看伏笔埋设/回收/超期 |
-| `/角色状态` | 汇总角色当前状态 |
-| `/时间线` | 查看事件时间顺序 |
-| `/联网调研` | 联网搜索补充知识库 |
+#### `/大纲` — 大纲级操作
 
-### 风格命令
+| 子命令 | 功能 |
+|--------|------|
+| `/大纲 --生成` | 生成初版大纲 |
+| `/大纲 --更新` | 小幅更新（不触发级联） |
+| `/大纲 --级联` | 手动触发三层索引级联 |
 
-| 命令 | 功能 |
-|------|------|
-| `/题材选风格` | 按题材矩阵选择基线风格 |
-| `/风格提取` | 从样章提取风格到库 |
-| `/仿写` | 提取写法模板与风格特征 |
-| `/拆书` | 拆解作品结构，提炼爽点钩子 |
+#### `/检查` — 质量审计（细粒度）
+
+| 子命令 | 功能 |
+|--------|------|
+| `/检查 --all [--章 <N>]` | 执行全维度审计 |
+| `/检查 --记忆` | 同步状态追踪器 |
+| `/检查 --一致性` | 综合一致性检查 |
+| `/检查 --角色` | 仅聚焦角色一致性 |
+| `/检查 --时间线` | 仅聚焦时间线冲突 |
+| `/检查 --设定` | 世界观/力量体系/地理一致性 |
+| `/检查 --伏笔` | 伏笔埋设/回收/超期扫描 |
+| `/检查 --文风` | 风格偏移检测 |
+| `/检查 --骚话` | 密度/类型/人设匹配审计 |
+| `/检查 --节奏` | 节奏档位/配额/冷却审计 |
+| `/检查 --AI味` | 7 大 AI 写作模式检测 |
+
+#### `/门禁` — 门禁流程
+
+| 子命令 | 功能 |
+|--------|------|
+| `/门禁 --预检` | 写前自检表（P1 后启用） |
+| `/门禁 --运行` | 执行门禁 5 步完整流程 |
+| `/门禁 --结算` | 承诺 vs 实际对比（P1 后启用） |
+| `/门禁 --修复` | 生成最短修复路径 |
+
+#### `/检索` — 记忆/剧情检索
+
+| 子命令 | 功能 |
+|--------|------|
+| `/检索 --剧情 <查询>` | RAG 检索相关片段 |
+| `/检索 --伏笔 [--状态 <X>]` | 查看伏笔状态 |
+| `/检索 --角色 [<名字>]` | 汇总角色当前状态 |
+| `/检索 --时间线 [<范围>]` | 查看事件时间顺序 |
+| `/检索 --索引重建 [--full]` | 重建 RAG 索引 |
+
+#### `/风格` — 风格系统
+
+| 子命令 | 功能 |
+|--------|------|
+| `/风格 --题材 <题材>` | 按题材矩阵选基线风格 |
+| `/风格 --提取 <样章>` | 提取风格到库 |
+| `/风格 --仿写 <样章...>` | 提取写法模板 |
+| `/风格 --拆书 <作品>` | 拆解结构、提炼爽点 |
+| `/风格 --校准` | 偏移检测（仅报告） |
+| `/风格 --迁移 <目标>` | 章节风格迁移 |
+
+#### `/骚话` — 骚话子系统
+
+| 子命令 | 功能 |
+|--------|------|
+| `/骚话 --扫描` | 扫描本章 beat sheet，推荐插入点 |
+| `/骚话 --生成 <编号>` | 按 A1-H12 编号生成候选台词 |
+| `/骚话 --密度 [--设定 <档>]` | 查询或设定密度档 |
+| `/骚话 --人设 <角色> [--建立\|--更新\|--查询]` | 管理角色骚话人设卡 |
+| `/骚话 --伏笔` | 查看 `SH-` 前缀伏笔 |
+| `/骚话 --审计 [--起始 N --终止 M]` | 跨章骚话审计（节奏/分布/一致性） |
+| `/骚话 --对决 <角色A> <角色B>` | 生成五阶段对决剧本 |
+
+#### `/研究` — 外部知识
+
+| 子命令 | 功能 |
+|--------|------|
+| `/研究 --搜索 <关键词>` | 联网搜索补充知识库 |
+| `/研究 --注入 <文件>` | 检索结果注入知识库 |
+| `/研究 --验证 <陈述>` | 事实核查 |
+
+### 旧命令别名（向后兼容）
+
+> 旧命令在过渡期（3-6 个月）仍可使用，自动路由到新形式。完整别名映射见 [command-contracts.md §四](references/advanced/command-contracts.md#四向后兼容别名表)。
+
+**核心映射速查**：
+
+```
+/一键开书   → /书 --开书
+/继续写     → /章 --续写
+/写作       → /章 --写
+/修复本章   → /章 --修复
+/改纲续写   → /书 --改纲
+/更新记忆   → /检查 --记忆
+/检查一致性 → /检查 --一致性
+/风格校准   → /检查 --文风
+/节奏审查   → /检查 --节奏
+/门禁检查   → /门禁 --运行
+/剧情检索   → /检索 --剧情
+/伏笔状态   → /检索 --伏笔
+/骚话       → /骚话 --扫描
+/骚话生成   → /骚话 --生成
+```
 
 ---
 
@@ -198,7 +292,8 @@ metadata:
 - [character-building.md](references/guides/character-building.md) — 人物塑造（性格核心 / 致命缺陷 / 说话风格）
 - [plot-structures.md](references/guides/plot-structures.md) — 情节结构（三幕式 / 英雄之旅 / 七点结构）
 - [content-expansion.md](references/guides/content-expansion.md) — 字数不足时的扩充技巧
-- [character-template.md](references/guides/character-template.md) / [outline-template.md](references/guides/outline-template.md) / [chapter-template.md](references/guides/chapter-template.md) / [title-guide.md](references/guides/title-guide.md)
+- [saohua.md](references/guides/saohua.md) — **骚话完整系统**（单文件，86 模板 + 人设卡 + 名场面 + 题材矩阵 + 节奏 + 伏笔 + 对决 + 组合技）
+- [outline-template.md](references/guides/outline-template.md) / [title-guide.md](references/guides/title-guide.md)
 
 ---
 
@@ -207,9 +302,10 @@ metadata:
 - 用户偏好系统（`user-preferences.json`，跨项目学习用户习惯）
 - 写作计划 JSON（`02-写作计划.json`，进度跟踪 + 中断续写）
 - 字数检查脚本（`scripts/check_chapter_wordcount.py`）
+- 命令别名路由与 lint 脚本（`scripts/command_alias.py`）— 旧命令 → 新命令映射 + 项目残留检查
 - 去 AI 味润色清单（专业模式必用，简易模式强烈推荐）
 
-→ 详见 [shared-infrastructure.md](references/flows/shared-infrastructure.md)
+→ 详见 [phase0-initialization.md](references/flows/phase0-initialization.md)「共享机制」小节
 
 ---
 
@@ -244,9 +340,10 @@ metadata:
 
 1. **没想好怎么开始？** 直接说「帮我写一部悬疑小说」就行，SKILL 会引导三层问答。
 2. **已有完整想法？** 在第一句话里说清楚"题材 + 主角 + 冲突"，SKILL 会跳过重复问答直接进入规划。
-3. **想写百万字长篇？** 开头加上 `/专业模式` 或 `/一键开书`，启用 Iron Law + 五步门禁 + 长期记忆。
+3. **想写百万字长篇？** 开头加上 `/专业模式` 或 `/书 --开书`，启用 Iron Law + 五步门禁 + 长期记忆。
 4. **中断了？** 重新触发 SKILL 时会自动检测并提示"继续上次的《XXX》？"。
-5. **写完发现不满意？** 用 `/修改章节` 或 `/改纲续写`，不要手动改 `novel_plan.md` 以免破坏级联索引。
+5. **写完发现不满意？** 用 `/章 --修改` 或 `/书 --改纲`，不要手动改 `novel_plan.md` 以免破坏级联索引。
+6. **旧命令还能用吗？** 可以。`/继续写`、`/更新记忆` 等在过渡期内仍工作，可通过 `python3 scripts/command_alias.py resolve /继续写` 查询对应新命令。
 
 ---
 
