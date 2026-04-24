@@ -135,6 +135,7 @@ metadata:
 - [references/advanced/reader-simulator-spec.md](references/advanced/reader-simulator-spec.md) — **读者模拟审稿规范**（v1.2.0 门禁第 6 维度：6 子分 + 4 读者画像）
 - [references/advanced/quality-dashboard-spec.md](references/advanced/quality-dashboard-spec.md) — **质量趋势仪表盘规范**（v1.2.0 跨章趋势 + 拐点告警 + 4 种输出格式）
 - [references/guides/saohua.md](references/guides/saohua.md) — **骚话完整系统**（单文件覆盖 86 模板 / 密度 / 触发 / 人设卡 / 名场面 / 题材矩阵 / 节奏 / 伏笔 / 对决 / 组合技）
+- [references/guides/platform-rules.md](references/guides/platform-rules.md) — **商业投稿规则**（番茄/起点/七猫/晋江/微信读书 + 违禁词分级 + 命名规范 + 标签）
 
 ### 节奏配额三档制
 

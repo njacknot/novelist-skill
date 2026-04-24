@@ -154,6 +154,7 @@ novelist-skill/
 │   │   ├── content-expansion.md
 │   │   ├── outline-template.md
 │   │   ├── title-guide.md
+│   │   ├── platform-rules.md         # 商业投稿：平台机制 / 违禁词 / 命名 / 标签
 │   │   └── saohua.md                 # ★ 骚话完整系统（v1.3 单文件：模板+人设+名场+矩阵+节奏+伏笔+对决+组合技）
 │   └── advanced/                     # 专业模式强约束规范
 │       ├── humanizer-guide.md
