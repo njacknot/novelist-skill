@@ -13,8 +13,10 @@
      "version": 2,
      "novelName": "[小说名称]",
      "projectPath": "./novelist-projects/{timestamp}-[小说名称]",
+     "platform": "[fanqie|general|qidian|...]",  // 番茄商业连载填 fanqie
      "totalChapters": [章节数],
-     "minWordsPerChapter": 3000,
+     "targetWordsPerChapter": [1800, 5000],
+     "minWordsPerChapter": 0,
      "createdAt": "[ISO时间]",
      "updatedAt": "[ISO时间]",
      "status": "planning",
@@ -30,6 +32,12 @@
      },
      // v1.2.0 新增：读者画像，单值或数组（详见 reader-simulator-spec.md §读者画像配置）
      "readerProfile": "webnovel_veteran",
+     "fanqieReviews": {
+       "opening_3_chapters": { "passed": false, "reviewedAt": null, "notes": "" },
+       "signing_20k": { "passed": false, "reviewedAt": null, "notes": "" },
+       "second_review_50k": { "passed": false, "reviewedAt": null, "notes": "" },
+       "final_review_80k": { "passed": false, "reviewedAt": null, "notes": "" }
+     },
 
      "chapters": [
        {
@@ -83,10 +91,14 @@
 Question: 选择写作模式
 Options:
 - 逐章串行（主 Agent 自己逐章写，全程无中断，适合短中篇）
-- 子Agent并行（分批派生子 Agent 并行写作，大纲驱动连贯性，适合中长篇）
+- 子Agent并行（仅非番茄项目可用；番茄项目只能并行准备素材/beat，正文必须串行）
 ```
 
 用户选择后：
 - 更新 `02-写作计划.json` 的 `writingMode` 字段
+- 若 `platform == "fanqie"`，强制 `writingMode = "serial"`，并在进入 Phase 3 前运行：
+  ```bash
+  python3 scripts/fanqie_flow_policy.py --plan <项目路径>/02-写作计划.json
+  ```
 - 更新 `status` 为 `"in_progress"`
 - 进入第三阶段：疯狂创作 → 详见 [phase3-writing.md](phase3-writing.md)

@@ -18,7 +18,7 @@
 
 | 主命令 | 职责 | 子参数 |
 |--------|------|--------|
-| `/书` | 全书级操作 | `--开书` / `--规划` / `--路线图` / `--改纲` |
+| `/书` | 全书级操作 | `--开书` / `--规划` / `--路线图` / `--番茄复盘` / `--改纲` |
 | `/章` | 章节级操作 | `--写` / `--续写` / `--批量` / `--修改` / `--修复` / `--快照` / `--回滚` |
 | `/大纲` | 大纲级操作 | `--生成` / `--更新` / `--级联` |
 | `/检查` | 质量审计 | `--记忆` / `--一致性` / `--角色` / `--时间线` / `--设定` / `--伏笔` / `--文风` / `--骚话` / `--节奏` / `--AI味` / `--读者` ★ / `--all` |
@@ -80,7 +80,7 @@
   2. `references/flows/phase1-questionnaire.md`（Q1-Q3 最小集）
 **输出**：`00_memory/` 初始化 + 首章 beat sheet
 **副作用**：创建项目目录骨架（`00_memory/` / `01_outline/` / `02_knowledge_base/` / `03_manuscript/` / `04_editing/`）
-**脚本**：`python3 scripts/novel_flow_executor.py one-click --project-root <目录> ...`
+**执行方式**：Agent 按 Phase 0-2 流程创建项目；脚本仅负责后续锚点、图谱、检索和门禁校验。
 **旧命令别名**：`/一键开书`
 
 #### `/书 --规划`
@@ -97,14 +97,26 @@
 **输出**：当前卷/阶段/章节位置 + 下一个关键锚点
 **旧命令别名**：（新增）
 
+#### `/书 --番茄复盘`
+
+**功能**：检查番茄项目是否到达首3章 / 2万字 / 5万字 / 8万字复盘节点，并禁止正文并行写作
+**查询路径**：`02-写作计划.json` + `references/guides/platform-rules.md`
+**脚本**：`python3 scripts/fanqie_flow_policy.py --plan <目录>/02-写作计划.json`
+**输出**：`can_continue`、`issues`、`checkpoint`
+**失败条件**：到达未通过节点、或 `platform == fanqie` 且 `writingMode == subagent-parallel`
+**旧命令别名**：（新增）
+
 #### `/书 --改纲 [--from-chapter N]`
 
 **功能**：改纲 + 锚点重算 + 图谱级联 + RAG 重建
 **查询路径**：
   1. `references/advanced/million-word-roadmap.md` §6 大纲锚点与进度配额
-  2. `references/advanced/million-word-roadmap.md` §9 知识图谱 Schema 与回写
-  3. `references/advanced/million-word-roadmap.md` §10 长篇一致性 RAG
-**脚本**：`python3 scripts/novel_flow_executor.py revise-outline --project-root <目录> --from-chapter <N>`
+  2. `references/advanced/million-word-roadmap.md` §10 知识图谱 Schema 与回写
+  3. `references/advanced/million-word-roadmap.md` §11 长篇一致性 RAG
+**脚本**：
+  - `python3 scripts/outline_anchor_check.py recalculate --project-root <目录>`
+  - `python3 scripts/story_graph_query.py validate --project-root <目录>`
+  - `python3 scripts/plot_rag_retriever.py build --project-root <目录> --full-rebuild`
 **产物**：`.flow/backup_anchors_<时间戳>.json`, `00_memory/revise_outline_report.md`
 **旧命令别名**：`/改纲续写`
 
@@ -125,15 +137,26 @@
   6. `references/guides/saohua.md` §六 十大名场面（若本章是名场面）
   7. `00_memory/foreshadow_ledger.md`（若存在，检查待回收伏笔）
 **输出**：`03_manuscript/第{XX}章-{标题}.md`
-**字数要求**：3000-5000 字
+**字数要求**：默认只统计不硬卡；如 `02-写作计划.json.minWordsPerChapter > 0`，由字数门禁按该值阻断。
 **旧命令别名**：`/写作`
+
+#### `/章 --控制卡 <章号>`
+
+**功能**：写前生成或校验章节控制卡，锁定本章任务、回忆压力、冲突、角色使用、禁止揭露与章末钩子
+**查询路径**：`02-写作计划.json` + `00_memory/novel_state.md` + `references/flows/phase3-writing.md`
+**脚本**：
+  - 生成：`python3 scripts/chapter_control_card.py generate --project-root <目录> --chapter <章号>`
+  - 校验：`python3 scripts/chapter_control_card.py validate --card-file <目录>/04_editing/control_cards/chNNN-control-card.md`
+**输出**：`04_editing/control_cards/chNNN-control-card.md`
+**失败条件**：控制卡缺失、关键小节缺失或关键小节为空；`/门禁 --运行` 会再次校验
+**旧命令别名**：（新增）
 
 #### `/章 --续写`
 
 **功能**：恢复会话状态 + 写新章节 + 自动门禁
 **查询路径**：phase3-writing.md
-**自动子流程**：`/检索 --剧情`（条件触发）→ `/章 --写` → `/门禁 --运行` → `/检索 --索引重建`
-**脚本**：`python3 scripts/novel_flow_executor.py continue-write --project-root <目录> --query "<新剧情>"`
+**自动子流程**：番茄项目先执行 `/书 --番茄复盘`；可继续时执行 `/检索 --剧情`（条件触发）→ `/章 --控制卡` → `/章 --写` → `/门禁 --运行` → `/检索 --索引重建`
+**执行方式**：Agent 串行执行上面的自动子流程；控制卡、门禁与检索分别由 `chapter_control_card.py`、`chapter_gate_check.py` 和 `plot_rag_retriever.py` 落地。长跑/外部 runner 应在本轮前后调用 `writeback_audit.py snapshot/changed`，确认项目文件确实回写。
 **旧命令别名**：`/继续写`, `/续写`
 
 #### `/章 --批量 <N>`
@@ -302,11 +325,11 @@
   2. `02-写作计划.json` 的 `readerProfile` 字段
   3. `<项目>/03_manuscript/<本章及最近 5 章>` 用作上下文
   4. `<项目>/01-大纲.md` 用于回报感评估
-**脚本**：`python3 scripts/reader_simulator.py --project-root <目录> --chapter-file <文件>`
+**脚本**：`python3 scripts/reader_simulator.py --project-root <目录> --chapter <章号>`
 **输出**：
   - `04_editing/gate_artifacts/<章号>/reader_report.md`（含总分 + 6 子分 + 弃书风险点 + 修复建议）
   - 同步回写 `02-写作计划.json` 的 `chapters[N].gateScores.reader`
-**通过线**：`gateThresholds.reader`（默认 70 分）
+**通过线**：`gateThresholds.reader`（默认 70 分）；番茄模式中该分数只作 advisory，节点复盘时人工读取，不作为单章硬阻断
 **旧命令别名**：（新增）
 
 ---
@@ -315,22 +338,23 @@
 
 #### `/门禁 --预检`
 
-**功能**（P1 落地后启用）：写前自检表
-**查询路径**：`references/advanced/pre-chapter-checklist-spec.md`（P1 新建）
-**输出**：`04_editing/pre_chapter/<章号>/self_check.yaml` + `commitment.md`
+**功能**：写前自检；专业模式以章节控制卡为主，不再依赖未落地的 YAML 预检
+**脚本**：`python3 scripts/chapter_control_card.py generate --project-root <目录> --chapter <章号>`
+**输出**：`04_editing/control_cards/chNNN-control-card.md`
 **旧命令别名**：（新增）
 
 #### `/门禁 --运行`
 
-**功能**：执行门禁 5 步完整流程
-**自动子流程**：`/检查 --记忆` → `/检查 --一致性` → `/检查 --文风` → `/校稿` → `/门禁 --运行` 本身生成 `gate_result.json`
+**功能**：执行门禁结算；番茄项目默认轻门禁，专业模式执行控制卡 + 六步门禁结算
+**自动子流程**：校验章节控制卡 → `/检查 --记忆` → `/检查 --一致性` → `/检查 --文风` → `/门禁 --校稿` → `/检查 --读者` → `/门禁 --运行` 本身生成 `gate_result.json`
 **脚本**：`python3 scripts/chapter_gate_check.py --project-root <目录> --chapter-file <文件>`
+**番茄模式**：当 `02-写作计划.json.platform == "fanqie"` 时，脚本输出 `gate_mode: fanqie`，只硬卡控制卡、安全合规、首段钩子、章末追读点、正典回写与 AI 高危风险；读者分为 advisory
 **旧命令别名**：`/门禁检查`
 
 #### `/门禁 --结算`
 
-**功能**（P1 落地后启用）：对比承诺 vs 实际，产出结算表
-**输出**：`reconciliation.md`
+**功能**：对比控制卡承诺 vs 章节实际；当前由 `/门禁 --运行` 的 `dimensions.control_card` 先做存在性/结构校验，人工结算可写入 `reconciliation.md`
+**输出**：`reconciliation.md`（可选）或 `gate_result.json.dimensions.control_card`
 **旧命令别名**：（新增）
 
 #### `/门禁 --修复`
@@ -346,7 +370,7 @@
 
 #### `/检索 --剧情 <查询>`
 
-**查询路径**：`references/advanced/million-word-roadmap.md` §10
+**查询路径**：`references/advanced/million-word-roadmap.md` §11
 **脚本**：`python3 scripts/plot_rag_retriever.py query --project-root <目录> --query "<描述>" --top-k 4 --candidate-k 12 --auto-build`
 **输出**：`00_memory/retrieval/next_plot_context.md`
 **旧命令别名**：`/剧情检索`
@@ -379,7 +403,7 @@
 
 #### `/风格 --题材 <题材名>`
 
-**查询路径**：`references/advanced/million-word-roadmap.md` §11
+**查询路径**：`references/advanced/million-word-roadmap.md` §12
 **旧命令别名**：`/题材选风格`
 
 #### `/风格 --提取 <样章文件>`

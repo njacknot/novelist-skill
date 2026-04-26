@@ -280,12 +280,12 @@ def score_end_hook(ctx: ChapterContext) -> Tuple[int, str, str]:
 
 
 def score_retention(ctx: ChapterContext) -> int:
-    """追读力：字数达标 + 对话比例 + 段落节奏。"""
+    """追读力：有效信息 + 对话比例 + 段落节奏。短章不天然扣分。"""
     score = 60
-    if 3000 <= ctx.word_count <= 6000:
-        score += 15
-    elif ctx.word_count < 2500:
-        score -= 15
+    if 800 <= ctx.word_count <= 6000:
+        score += 8
+    elif ctx.word_count < 800:
+        score -= 10
     elif ctx.word_count > 7000:
         score -= 8
 
@@ -450,7 +450,7 @@ def render_report(
 
     lines.append("---\n")
     lines.append(f"## §2 追读力诊断（retention_score: {score.retention}）\n")
-    lines.append(f"- 本章字数：{ctx.word_count}（达标区间 3000-6000）")
+    lines.append(f"- 本章字数：{ctx.word_count}（默认不设硬下限；800-6000 视为常规可读区间）")
     d_chars = sum(_count_chinese(d) for d in ctx.dialogues)
     ratio = d_chars / max(1, ctx.word_count) * 100
     lines.append(f"- 对话字数占比：{ratio:.1f}% （目标 ≥ 30%）")
@@ -521,7 +521,7 @@ def render_report(
     if score.immersion < 70 and score.ai_hits:
         suggestions.append(("P0", "正文多处", f"{len(score.ai_hits)} 处 AI 模板化句式", "逐句替换为具体动作/细节"))
     if score.retention < 70:
-        suggestions.append(("P1", "正文节奏", "字数 / 对话比例 / 段落长度未达标", "参考 phase3-writing.md §6"))
+        suggestions.append(("P1", "正文节奏", "有效信息 / 对话比例 / 段落长度未达标", "参考 phase3-writing.md §6"))
     if score.surprise < 70:
         suggestions.append(("P1", "正文", "缺少预期外信息", "至少加 1 个反转锚点"))
     if score.payoff < 70 and foreshadows:

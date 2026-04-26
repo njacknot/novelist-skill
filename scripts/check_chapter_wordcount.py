@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 """
 章节字数检查脚本
-检查指定章节文件的字数，低于3000字时提示需要扩充
+检查指定章节文件的字数；默认只报告字数，传入最小字数时才作为硬门槛。
 """
 
-import os
 import re
 import sys
 from pathlib import Path
+from typing import Optional
 
 # 修复 Windows 控制台编码问题
 if sys.platform == 'win32':
@@ -52,15 +52,23 @@ def extract_content_from_chapter(file_path: Path) -> str:
     return main_content
 
 
-def check_chapter(file_path: str, min_words: int = 3000) -> dict:
+def _normalize_min_words(min_words: Optional[int]) -> Optional[int]:
+    if min_words is None or min_words <= 0:
+        return None
+    return min_words
+
+
+def check_chapter(file_path: str, min_words: Optional[int] = None) -> dict:
     """检查单个章节的字数"""
     path = Path(file_path)
+    threshold = _normalize_min_words(min_words)
 
     if not path.exists():
         return {
             'file': str(path),
             'exists': False,
             'word_count': 0,
+            'min_words': threshold,
             'status': 'error',
             'message': f'文件不存在: {file_path}'
         }
@@ -68,21 +76,26 @@ def check_chapter(file_path: str, min_words: int = 3000) -> dict:
     main_content = extract_content_from_chapter(path)
     word_count = count_chinese_words(main_content)
 
-    status = 'pass' if word_count >= min_words else 'fail'
-    message = f'字数: {word_count}' + (
-        f' (✓ 达标)' if word_count >= min_words else f' (✗ 不足，需要至少 {min_words} 字)'
-    )
+    if threshold is None:
+        status = 'pass'
+        message = f'字数: {word_count} (仅报告，未设置硬下限)'
+    else:
+        status = 'pass' if word_count >= threshold else 'fail'
+        message = f'字数: {word_count}' + (
+            f' (✓ 达标)' if word_count >= threshold else f' (✗ 不足，需要至少 {threshold} 字)'
+        )
 
     return {
         'file': str(path),
         'exists': True,
         'word_count': word_count,
+        'min_words': threshold,
         'status': status,
         'message': message
     }
 
 
-def check_all_chapters(directory: str, pattern: str = '第*.md', min_words: int = 3000) -> list:
+def check_all_chapters(directory: str, pattern: str = '第*.md', min_words: Optional[int] = None) -> list:
     """检查目录下所有符合模式的章节文件"""
     dir_path = Path(directory)
     if not dir_path.exists():
@@ -99,7 +112,7 @@ def check_all_chapters(directory: str, pattern: str = '第*.md', min_words: int 
     return results
 
 
-def print_results(results: list, min_words: int = 3000):
+def print_results(results: list, min_words: Optional[int] = None):
     """打印检查结果"""
     if not results:
         print('没有找到章节文件')
@@ -134,18 +147,21 @@ def print_results(results: list, min_words: int = 3000):
     print(f'总计: {len(results)} 章 | {passed} 章达标 | {failed} 章不足 | 总字数: {total_words:,}')
     print('-' * 60)
 
-    if failed > 0:
-        print(f'\n⚠️  有 {failed} 章内容不足 {min_words} 字，建议使用扩充技巧:')
+    threshold = _normalize_min_words(min_words)
+    if failed > 0 and threshold is not None:
+        print(f'\n⚠️  有 {failed} 章内容不足 {threshold} 字，建议使用扩充技巧:')
         print('   - 添加细节描写（环境、心理、动作）')
         print('   - 增加对话场景')
         print('   - 扩展人物内心活动')
         print('   - 补充背景故事')
         print(f'\n   参考: references/guides/content-expansion.md')
+    elif threshold is None:
+        print('\nℹ️  未设置硬性最低字数；本报告只统计字数，不阻断短章。')
 
 
 def main():
     """主函数"""
-    min_words = 3000
+    min_words = None
 
     if len(sys.argv) < 2:
         print('用法:')
@@ -164,12 +180,12 @@ def main():
             print('错误: 使用 --all 时需要指定目录路径')
             return
         directory = sys.argv[2]
-        min_words = int(sys.argv[3]) if len(sys.argv) > 3 else 3000
+        min_words = int(sys.argv[3]) if len(sys.argv) > 3 else None
         results = check_all_chapters(directory, min_words=min_words)
         print_results(results, min_words)
     else:
         file_path = sys.argv[1]
-        min_words = int(sys.argv[2]) if len(sys.argv) > 2 else 3000
+        min_words = int(sys.argv[2]) if len(sys.argv) > 2 else None
         result = check_chapter(file_path, min_words)
         print_results([result], min_words)
 

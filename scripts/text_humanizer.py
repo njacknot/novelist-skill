@@ -6,7 +6,7 @@ text_humanizer.py — 去 AI 味检测与润色工具（零外部依赖）
 实现 references/advanced/humanizer-guide.md 的完整 7 大 AI 写作模式检测：
 - detect：扫描章节正文 → JSON 输出命中列表
 - report：生成可读 Markdown 报告
-- prompt：输出两遍式润色 Prompt
+- prompt：输出清风险 + 回声线 + 自审润色 Prompt
 
 依赖：仅 Python 标准库（zero-dep）。
 退出码：0 通过（AI 味低） / 1 超标 / 2 输入错误
@@ -142,7 +142,7 @@ class DetectionResult:
 
 @dataclass(frozen=True)
 class RiskRule:
-    """朱雀/项目专项风险规则。"""
+    """通用或项目自定义风险规则。"""
 
     rule_id: str
     category: str
@@ -187,8 +187,8 @@ FATAL_RISK_RULES: Sequence[RiskRule] = (
     RiskRule("fatal.eye.flash", "致命模板", "high", r"眼神里闪过一丝", "避免模板化眼神描写，改成可观察反应。", 16),
     RiskRule("fatal.pause.dun", "致命模板", "high", r"顿了顿", "改成具体动作承接，例如放下杯子、扣住手机。", 12),
     RiskRule("fatal.silence.long", "致命模板", "high", r"沉默了很久|沉默了一会儿", "用现场声音、人物动作承载沉默。", 14),
-    RiskRule("fatal.no_answer", "致命模板", "high", r"(?:宁远|他|她)?没有立刻回答|(?:宁远|他|她)?没有回答", "不要直接说明未回答，写他/她做了什么。", 14),
-    RiskRule("fatal.no_speak", "致命模板", "high", r"(?:宁远|他|她)?没有说话", "不要直接说明沉默，改成动作或现场反应。", 14),
+    RiskRule("fatal.no_answer", "致命模板", "high", r"(?:他|她)?没有立刻回答|(?:他|她)?没有回答", "不要直接说明未回答，写他/她做了什么。", 14),
+    RiskRule("fatal.no_speak", "致命模板", "high", r"(?:他|她)?没有说话", "不要直接说明沉默，改成动作或现场反应。", 14),
     RiskRule("fatal.deep_thing", "致命模板", "high", r"很深的东西|复杂的情绪|复杂的东西", "把抽象情绪拆成具体动作或选择。", 14),
     RiskRule("fatal.know", "致命模板", "high", r"他知道|她知道|他明白|她明白|终于明白", "减少解释性判断，改成证据、反应或动作。", 10),
     RiskRule("fatal.deep_eye", "致命模板", "high", r"眼神深邃", "删除空泛形容，改成具体注视对象和行为。", 12),
@@ -229,7 +229,7 @@ REPLACEMENT_RISK_TAGS: Sequence[str] = (
 
 
 EXPOSITION_RISK_PATTERNS: Sequence[str] = (
-    "他很清楚", "她很清楚", "宁远很清楚", "这意味着", "这说明",
+    "他很清楚", "她很清楚", "这意味着", "这说明",
     "终于意识到", "已经意识到", "这才看清", "看得出来",
 )
 
@@ -359,7 +359,7 @@ def detect(content: str, filepath: str = "") -> DetectionResult:
     )
 
 
-# ───────────────────────────── 朱雀/项目专项风险门禁 ─────────────────────────────
+# ───────────────────────────── 通用/项目自定义风险门禁 ─────────────────────────────
 
 
 def _split_sentences(text: str) -> List[str]:
@@ -402,7 +402,7 @@ def _load_risk_rules(path: Optional[str]) -> Tuple[Sequence[RiskRule], Sequence[
 
 
 class RiskDetector:
-    """批量章节 AI 风险门禁；补充 7 大模式检测之外的项目专项规则。"""
+    """批量章节 AI 风险门禁；补充 7 大模式检测之外的可配置风险规则。"""
 
     def __init__(
         self,
@@ -795,7 +795,7 @@ def render_report(result: DetectionResult) -> str:
 
 
 def render_prompt(content: str, result: DetectionResult) -> str:
-    """生成两遍式润色 Prompt。"""
+    """生成清风险 + 回声线 + 自审润色 Prompt。"""
     top_hits = sorted(result.hits, key=lambda h: ("P0", "P1", "P2").index(h.severity))[:15]
     hit_desc = "\n".join(f"  - L{h.line_number}: \"{h.matched_text}\" → {h.suggestion}" for h in top_hits)
 
@@ -814,9 +814,17 @@ def render_prompt(content: str, result: DetectionResult) -> str:
 4. 对话标签统一用"说"或直接删除
 5. 删除论文式开头（不难看出、事实上等）
 
-## 第二遍：AI 自审
+## 第二遍：恢复项目声线
 
-完成第一遍后，对自己的修改稿提问：
+清除模板后，必须补回"像本书"的质感：
+1. 角色说话方式要按身份、年龄、利益位置区分
+2. 叙述视角不能替角色总结未知信息，要保留误读和偏见
+3. 紧张场景用动作和短句推进，情绪场景用留白和具体物件承压
+4. 补行业动作、地名、物件、身体反应，不补泛泛形容词
+
+## 第三遍：AI 自审
+
+完成前，对自己的修改稿提问：
 > "这段文字哪些地方还是明显 AI 生成的感觉？"
 
 列出 3-5 条具体问题，然后针对这些问题再次修改后输出最终版。
@@ -942,11 +950,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     pr.add_argument("--threshold", type=int, default=50, help="AI 味指数阈值（默认 50）")
     pr.set_defaults(func=cmd_report)
 
-    pp = sub.add_parser("prompt", help="输出两遍式润色 Prompt")
+    pp = sub.add_parser("prompt", help="输出清风险 + 回声线 + 自审润色 Prompt")
     pp.add_argument("--chapter-file", required=True, help="章节文件路径")
     pp.set_defaults(func=cmd_prompt)
 
-    pg = sub.add_parser("risk", help="批量执行朱雀/项目专项 AI 风险门禁")
+    pg = sub.add_parser("risk", help="批量执行通用/项目自定义 AI 风险门禁")
     pg.add_argument("path", help="待检测的 Markdown 文件或目录")
     pg.add_argument("-o", "--output", default=None, help="输出报告路径")
     pg.add_argument("-f", "--format", choices=["console", "markdown", "json"], default="console")

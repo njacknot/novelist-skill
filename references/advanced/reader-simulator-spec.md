@@ -44,7 +44,7 @@
 gateScores.reader.score = Σ(子分 × 权重) / 100
 ```
 
-**通过线**：默认 70 分（可在 `02-写作计划.json` 顶层配置 `gateThresholds.reader`，默认 70）。
+**通过线**：默认 70 分（可在 `02-写作计划.json` 顶层配置 `gateThresholds.reader`，默认 70）。番茄模式中读者分只作 advisory，不作为单章硬阻断；首3章、2万字、5万字、8万字节点复盘时再人工读取读者报告。
 
 ---
 

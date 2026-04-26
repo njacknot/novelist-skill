@@ -4,7 +4,7 @@
 
 **面向 Codex CLI / Gemini CLI 的中文小说全流程创作技能**
 
-*一个 skill 覆盖短篇到百万字长篇：简易模式 + 专业模式双档切换*
+*一个 skill 覆盖番茄签约冲刺、短篇到百万字长篇：番茄模式 + 简易模式 + 专业模式*
 
 [![Skill](https://img.shields.io/badge/Agent_Skills-Standard-blue)](https://github.com/obra/Skills)
 [![Codex CLI](https://img.shields.io/badge/Codex_CLI-supported-success)](https://github.com/openai/codex)
@@ -19,12 +19,13 @@
 
 `novelist` 是一个遵循 [Agent Skills 开放标准](https://github.com/obra/Skills) 的中文小说创作技能，综合了 [`chinese-novelist-skill`](https://github.com/PenglongHuang/chinese-novelist-skill) 的清晰创作流程与 [`novel-creator-skill`](https://github.com/leenbj/novel-creator-skill) 的长篇强约束机制。
 
-一份 SKILL、两档模式：
+一份 SKILL、三档模式：
 
 | 模式 | 适用规模 | 核心机制 |
 |------|---------|----------|
-| **简易模式**（默认） | 10–50 章 / 单章 3000-5000 字 | 三层问答 → 自动规划 → 串行/并行写作 → 字数校验 |
-| **专业模式** `/专业模式` | 100 万字以上 | Iron Law + 六步门禁（v1.2.0） + RAG 检索 + 知识图谱 + 大纲锚点 + 反向刹车 + 去 AI 味 + 质量趋势仪表盘 |
+| **番茄模式** `platform: fanqie` | 商业连载 / 签约冲刺 | 首3章 → 2万字 → 5万字 → 8万字节点复盘 + 轻门禁 + 串行正文 |
+| **简易模式**（默认） | 10–50 章 / 单章自然浮动，允许短章低于 2200 字 | 三层问答 → 自动规划 → 串行写作 → 字数统计 |
+| **专业模式** `/专业模式` | 100 万字以上 | Iron Law + 写前控制卡 + 六步门禁（v1.2.0） + RAG 检索 + 知识图谱 + 大纲锚点 + 反向刹车 + 去 AI 味 + 质量趋势仪表盘 |
 
 ---
 
@@ -88,17 +89,24 @@ CLI 会自动识别并激活本技能。
 - **偏好记忆**：`user-preferences.json` 跨项目学习你的写作偏好
 - **中断续写**：扫描 `02-写作计划.json`，自动检测并从断点继续
 - **两种写作模式**：逐章串行 / 子 Agent 并行
-- **自动校验**：完稿后字数、连贯性自检，不合格自动重写（最多 3 轮）
+- **自动校验**：完稿后文件、字数、连贯性自检；字数默认只统计，配置硬下限后才阻断
+
+### 🍅 番茄模式（商业连载）
+
+- **节点复盘**：首3章、2万字、5万字、8万字自动停点，不一口气写完整本
+- **轻门禁**：控制卡、安全合规、首段钩子、章末追读点、正典回写、AI 高危风险硬卡；读者模拟分只作建议
+- **串行正文**：禁用章节正文并行，子 Agent 只能准备素材/beat/竞品拆解
+- **题材适配**：爽文/打脸/轻松流可启用骚话系统，悬疑/现实/年代/种田/细腻女频默认改为角色声线与情绪钩子
 
 ### 🧱 专业模式（长篇强约束）
 
 - **Iron Law**：6 条不可违反的铁律（章节闭环、开书确认、禁止元信息、禁止门禁失败绕过、禁止改纲、禁止剧情加速）
-- **六步质量门禁**（v1.2.0新增读者维度）：更新记忆 → 检查一致性 → 风格校准 → 校稿 → **读者审稿** → 门禁检查
+- **写前控制卡 + 六步质量门禁**（v1.2.0新增读者维度）：控制卡 → 更新记忆 → 检查一致性 → 风格校准 → 校稿 → **读者审稿** → 门禁检查
 - **质量趋势仪表盘**（v1.2.0）：`/面板 --质量` 输出五维度趋势 + 读者 6 子项 + 拐点告警 + 离群/高光章
 - **读者模拟审稿**（v1.2.0）：`/检查 --读者` 模拟网文老读者给出 6 子分章末钩子/追读力/意外感/沉浸度/回报感/传播性
-- **五层长期记忆**：门禁 + RAG 检索 + 知识图谱 + 大纲锚点 + 跨 Agent 审核
+- **正典优先的长期记忆**：`00_memory/novel_state.md` / 大纲 / 人物档案是正典，RAG 与知识图谱只做派生视图；门禁 + 控制卡 + 跨 Agent 审核负责防漂移
 - **反向刹车 + 节奏配额**：禁止剧情加速，慢档/中档/快档三档制，A/B/C 配额每章至多 1 项
-- **去 AI 味 humanizer**：两遍式润色，7 大 AI 写作模式逐一清除，并提供批量专项风险门禁
+- **去 AI 味 humanizer**：清风险 + 回声线 + 自审，7 大 AI 写作模式逐一清除，并提供批量专项风险门禁
 - **多步流水线写作**：Beat Sheet → Beat 扩写 → 章节合成 → 门禁
 
 ### 💥 网文骚话系统（通用）
@@ -168,6 +176,12 @@ novelist-skill/
     ├── check_chapter_wordcount.py    # 字数检查（简易模式必备）
     ├── text_humanizer.py             # 去 AI 味检测 + 批量专项风险门禁
     ├── command_alias.py              # 命令别名路由 + lint（v1.1.0 新增）
+    ├── chapter_control_card.py       # 章节控制卡生成/校验
+    ├── chapter_gate_check.py         # 门禁结算 + gate_result 回写
+    ├── gate_repair_plan.py           # 门禁失败修复计划生成
+    ├── fanqie_flow_policy.py         # 番茄节点复盘 + 正文并行守卫
+    ├── plot_rag_retriever.py         # 剧情检索兼容入口
+    ├── writeback_audit.py            # 续写/马拉松模式回写快照审计
     ├── reader_simulator.py           # ★ 读者模拟审稿（v1.2.0 新增）
     ├── quality_dashboard.py          # ★ 质量趋势仪表盘（v1.2.0 新增）
     └── install.sh                    # 跨工具一键安装
@@ -204,6 +218,8 @@ novelist-skill/
 ├── 03_manuscript/
 │   └── 第001章_*.md ... 第800章_*.md
 └── 04_editing/
+    ├── control_cards/
+    │   └── ch001-control-card.md
     ├── gate_artifacts/
     │   └── 第001章/
     │       ├── memory_update.md
@@ -231,6 +247,6 @@ novelist-skill/
 本技能综合以下两个 Claude Code skill 的设计与文档：
 
 - [`PenglongHuang/chinese-novelist-skill`](https://github.com/PenglongHuang/chinese-novelist-skill) — 三层递进式问答、偏好记忆、中断续写、三种写作模式
-- [`leenbj/novel-creator-skill`](https://github.com/leenbj/novel-creator-skill) — Iron Law、五步门禁、RAG 检索、知识图谱、去 AI 味 humanizer、反向刹车
+- [`leenbj/novel-creator-skill`](https://github.com/leenbj/novel-creator-skill) — Iron Law、门禁、RAG 检索、知识图谱、去 AI 味 humanizer、反向刹车
 
 MIT License.
