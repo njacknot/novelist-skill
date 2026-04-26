@@ -286,8 +286,12 @@
 
 #### `/检查 --AI味`
 
-**查询路径**：`references/advanced/humanizer-guide.md` 7 大 AI 写作模式
-**输出**：`copyedit_report.md` 的 AI 味章节
+**查询路径**：`references/advanced/humanizer-guide.md` 7 大 AI 写作模式 + 项目专项风险门禁
+**脚本**：
+  - 单章通用检测：`python3 scripts/text_humanizer.py detect --chapter-file <文件>`
+  - 批量专项门禁：`python3 scripts/text_humanizer.py risk <章节文件或目录> --fail-on fail`
+**输出**：`copyedit_report.md` 的 AI 味章节；批量扫描可额外输出 `04_editing/AI风险门禁报告.md`
+**阻断规则**：critical 事故必阻断；同章高危模板重复命中或模板权重超过阈值才阻断。短段比例、字数偏低、解释性句子默认只作为 warning/info，避免误伤网文短段节奏。
 **旧命令别名**：（细化自 /校稿）
 
 #### `/检查 --读者`

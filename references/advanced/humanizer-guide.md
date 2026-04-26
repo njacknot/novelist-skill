@@ -135,14 +135,18 @@ AI 非常喜欢把事物凑成三个一组（"A、B 和 C"）来制造"全面感
 ## 脚本用法
 
 ```bash
-# 检测章节的 AI 痕迹（JSON 输出）
+# 检测单章的 7 大 AI 痕迹（JSON 输出）
 python3 scripts/text_humanizer.py detect --chapter-file 03_manuscript/第15章.md
 
 # 获取可读报告
 python3 scripts/text_humanizer.py report --chapter-file 03_manuscript/第15章.md
 
+# 批量执行朱雀/项目专项 AI 风险门禁
+python3 scripts/text_humanizer.py risk 03_manuscript -f markdown \
+  --output 04_editing/AI风险门禁报告.md --fail-on fail
+
 # 生成两遍式润色 prompt（供复制给 Claude 执行）
 python3 scripts/text_humanizer.py prompt --chapter-file 03_manuscript/第15章.md
 ```
 
-`continue-write` 会自动在生成门禁产物时调用 `detect`，结果写入 `copyedit_report.md`，供 `/门禁 --校稿` 步骤参考。
+`detect/report/prompt` 负责通用 7 大 AI 模式；`risk` 负责项目专项高风险模板、批量替换事故、替代表达重复、解释性句子与节奏提示。执行 `/门禁 --校稿` 时，`risk --fail-on fail` 只阻断 critical 级事故，或同章高危模板重复命中 / 权重超过阈值的情况；单次模板、warning/info 写入报告，供编辑修订参考。字数不足建议交给独立字数门禁最终判定，避免和 AI 味门禁混在一起。

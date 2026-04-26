@@ -98,7 +98,7 @@ CLI 会自动识别并激活本技能。
 - **读者模拟审稿**（v1.2.0）：`/检查 --读者` 模拟网文老读者给出 6 子分章末钩子/追读力/意外感/沉浸度/回报感/传播性
 - **五层长期记忆**：门禁 + RAG 检索 + 知识图谱 + 大纲锚点 + 跨 Agent 审核
 - **反向刹车 + 节奏配额**：禁止剧情加速，慢档/中档/快档三档制，A/B/C 配额每章至多 1 项
-- **去 AI 味 humanizer**：两遍式润色，7 大 AI 写作模式逐一清除
+- **去 AI 味 humanizer**：两遍式润色，7 大 AI 写作模式逐一清除，并提供批量专项风险门禁
 - **多步流水线写作**：Beat Sheet → Beat 扩写 → 章节合成 → 门禁
 
 ### 💥 网文骚话系统（通用）
@@ -166,6 +166,7 @@ novelist-skill/
 │       └── quality-dashboard-spec.md # ★ 质量趋势仪表盘规范（v1.2.0）
 └── scripts/
     ├── check_chapter_wordcount.py    # 字数检查（简易模式必备）
+    ├── text_humanizer.py             # 去 AI 味检测 + 批量专项风险门禁
     ├── command_alias.py              # 命令别名路由 + lint（v1.1.0 新增）
     ├── reader_simulator.py           # ★ 读者模拟审稿（v1.2.0 新增）
     ├── quality_dashboard.py          # ★ 质量趋势仪表盘（v1.2.0 新增）
